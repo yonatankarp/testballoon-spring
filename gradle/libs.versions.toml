@@ -1,0 +1,28 @@
+[versions]
+kotlin = "2.4.0"
+spring-boot = "4.1.0"
+spring-dependency-management = "1.1.7"
+testballoon = "1.0.1-K2.4.0"
+mockk = "1.14.11"
+junit-platform = "1.13.4"
+jvm = "25"
+
+[libraries]
+testballoon-core = { module = "de.infix.testBalloon:testBalloon-framework-core", version.ref = "testballoon" }
+# Spring's test infrastructure only — no JUnit, Mockito or AssertJ (unlike spring-boot-starter-test).
+spring-test = { module = "org.springframework:spring-test" }
+spring-boot-test = { module = "org.springframework.boot:spring-boot-test" }
+spring-boot-test-autoconfigure = { module = "org.springframework.boot:spring-boot-test-autoconfigure" }
+# Consumed by the integration-test module to exercise a real @WebFluxTest slice.
+spring-boot-webflux-test = { module = "org.springframework.boot:spring-boot-webflux-test" }
+spring-boot-starter-webflux = { module = "org.springframework.boot:spring-boot-starter-webflux" }
+json-path = { module = "com.jayway.jsonpath:json-path" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
+testballoon = { id = "de.infix.testBalloon", version.ref = "testballoon" }
