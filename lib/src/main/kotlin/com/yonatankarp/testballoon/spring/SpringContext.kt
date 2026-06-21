@@ -8,14 +8,17 @@ import java.lang.reflect.Method
 internal class SpringContext private constructor(
     private val testContextManager: TestContextManager,
     private val carrierInstance: SpringTestConfig,
-    private val mocks: List<RegisteredMock>,
+    private val doubles: List<RegisteredDouble>,
 ) {
     val applicationContext: ApplicationContext
         get() = testContextManager.testContext.applicationContext
 
     internal fun beforeTest() {
         testContextManager.beforeTestMethod(carrierInstance, CARRIER_METHOD)
-        mocks.forEach { clearMocks(it.mock) }
+        // A spy's instance only exists once its bean has been requested; eagerly realize
+        // any unrealized spy here so every double starts each test in a known, reset state.
+        doubles.forEach { it.realizeIn(applicationContext) }
+        doubles.forEach { clearMocks(it.instance) }
     }
 
     internal fun afterTest() {
@@ -30,14 +33,14 @@ internal class SpringContext private constructor(
         private val CARRIER_METHOD: Method =
             SpringTestConfig::class.java.getDeclaredMethod("springTestBalloonCarrier")
 
-        fun load(carrier: Class<out SpringTestConfig>, mocks: List<RegisteredMock>): SpringContext {
+        fun load(carrier: Class<out SpringTestConfig>, doubles: List<RegisteredDouble>): SpringContext {
             val instance = instantiate(carrier)
-            MockBeanRegistry.push(mocks)
+            MockBeanRegistry.push(doubles)
             try {
                 val testContextManager = TestContextManager(carrier)
                 testContextManager.beforeTestClass()
                 testContextManager.prepareTestInstance(instance)
-                return SpringContext(testContextManager, instance, mocks)
+                return SpringContext(testContextManager, instance, doubles)
             } finally {
                 MockBeanRegistry.pop()
             }

@@ -43,8 +43,58 @@ setup nests inside via `springTest`.
   block and shared by its tests.
 - `mockBean<T>(name = null, relaxed = false)` — a mockk mock registered as a primary
   bean (or under `name`, for `@Qualifier` injection points), reset before each test.
+- `spyBean<T>(name = null)` — a mockk spy wrapping the **real** bean of type `T`
+  (Spring `@SpyBean` parity): unstubbed calls run the real implementation and are
+  recorded; individual calls can be stubbed. Reset before each test. See below.
 - `bean<T>()` / `bean<T>(name)` — look up a bean from the live `ApplicationContext`.
 - `applicationContext` — the context itself, as an escape hatch.
+
+### Spy beans
+
+`spyBean<T>()` wraps the real bean rather than replacing it. The real bean only exists
+once the context is built, so it is returned through a property delegate (read it inside
+a test body, not at declaration time):
+
+```kotlin
+val SpyBeanSuite by testSuite {
+    springTest<SpyContext> {
+        val calculator by spyBean<Calculator>()
+
+        test("real by default, stubbed selectively") {
+            check(calculator.square(3) == 9)            // runs the real implementation
+            every { calculator.square(3) } returns 1000
+            check(calculator.square(3) == 1000)         // stub wins
+            check(calculator.square(4) == 16)           // other args still real
+            verify { calculator.square(4) }             // calls are recorded
+        }
+    }
+}
+```
+
+### Profiles, properties and extra configuration
+
+These all live as annotations on the carrier (Spring reads them off the `Class`):
+
+```kotlin
+@SpringBootTest(classes = [AppConfig::class], properties = ["app.greeting=Hello"])
+@ActiveProfiles("staging")          // selects profile-specific beans
+@TestPropertySource(properties = ["app.region=eu-central-1"])
+@Import(ExtraConfig::class)         // contributes the extra config's beans
+class AppContext : SpringTestConfig()
+```
+
+Read properties the Kotlin-first way through the `Environment` bean (no field injection):
+
+```kotlin
+test("properties resolve") {
+    val env = bean<Environment>()
+    check(env.getProperty("app.region") == "eu-central-1")
+}
+```
+
+`@DynamicPropertySource` works too — declare it as a `@JvmStatic` method on the carrier's
+companion object; the driven `TestContextManager` picks it up exactly as it does off a
+JUnit test class.
 
 ### Works with any slice or the full context
 
@@ -61,8 +111,14 @@ val GreetingAppSuite by testSuite {
 }
 ```
 
-See [`integration-test/`](integration-test/src/test/kotlin) for runnable `@WebFluxTest`,
-`@SpringBootTest`, and named-bean examples.
+The bridge is slice-agnostic: it drives Spring's own `TestContextManager`, so any slice
+that works off a `Class` works here. [`integration-test/`](integration-test/src/test/kotlin)
+has runnable examples for `@WebFluxTest`, `@SpringBootTest`, `@JsonTest` (a non-WebFlux
+slice), `@ActiveProfiles`, `@TestPropertySource`/`properties`, `@Import`,
+`@DynamicPropertySource`, named beans, and spy beans.
+
+> Note: under Spring Boot 4.1 the `@JsonTest` `ObjectMapper` is Jackson 3
+> (`tools.jackson.databind.ObjectMapper`), not the Jackson 2 `com.fasterxml.jackson.*`.
 
 ## Installation
 
@@ -109,8 +165,15 @@ One context per `springTest` block, shared across its tests. Mocks are reset
 (`clearMocks`) before each test, so every test re-stubs from scratch. Each suite
 owns its mock instances, so two suites do not share a cached context.
 
-Not yet supported: method-level test annotations (`@Sql` etc.) and cross-suite
-context caching.
+### Not feasible (by design)
+
+- **Method-level test annotations** (`@Sql`, `@Transactional`, `@DirtiesContext` on a
+  method, etc.) — Spring reads these off a per-test JVM `Method`, but testBalloon tests
+  are lambdas with no backing method to annotate, and we deliberately don't synthesize
+  one. Use a testBalloon fixture for per-test setup/teardown instead, or put a
+  class-level equivalent on the carrier where one exists.
+- **Cross-suite context caching** — each suite owns its own mock/spy instances, so two
+  suites never share a cached context (Spring keys caching on customizer equality).
 
 ## Compatibility
 
