@@ -1,5 +1,8 @@
 package com.yonatankarp.testballoon.spring
 
+import com.yonatankarp.testballoon.spring.internal.RegisteredDouble
+import com.yonatankarp.testballoon.spring.internal.SpringContext
+import com.yonatankarp.testballoon.spring.internal.SpyHolder
 import de.infix.testBalloon.framework.core.TestFixture
 import de.infix.testBalloon.framework.core.TestSuite
 import io.mockk.mockk
@@ -26,7 +29,6 @@ import kotlin.reflect.KProperty
  * reset before each test.
  */
 public inline fun <reified C : SpringTestConfig> TestSuite.springTest(
-    // noinline: the lambda is forwarded to the non-inline overload below.
     noinline content: SpringSuiteScope.() -> Unit,
 ): Unit = springTest(C::class.java, content)
 

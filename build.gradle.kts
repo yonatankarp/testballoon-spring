@@ -6,8 +6,9 @@ plugins {
 }
 
 group = "com.yonatankarp"
-// Releases pass -PreleaseVersion=<tag> (a leading "v" is stripped); otherwise a SNAPSHOT.
-version = providers.gradleProperty("releaseVersion").map { it.removePrefix("v") }.getOrElse("0.1.0-SNAPSHOT")
+// The release workflow writes `version=<tag>` into gradle.properties (a leading "v" is
+// stripped); other builds default to a SNAPSHOT.
+version = providers.gradleProperty("version").map { it.removePrefix("v") }.getOrElse("0.1.0-SNAPSHOT")
 
 subprojects {
     repositories {
