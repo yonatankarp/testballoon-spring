@@ -63,18 +63,17 @@ kover {
         }
 
         verify {
-            // Thresholds sit at (line) / just below (branch) the coverage actually achieved
-            // by the black-box suites. The uncovered remainder is exclusively defensive guards
-            // and error paths that only surface as failed context loads (carrier without a
-            // no-arg ctor; spyBean no-bean / ambiguous-bean errors; spying a @Primary bean) and
-            // cannot be asserted inside a passing suite.
+            // Combined coverage of the black-box testBalloon suites and the lib's white-box
+            // unit tests (achieved: line ~97%, branch ~96%). Gate set just below, with a little
+            // headroom. The lone uncovered branch is an obscure naming edge (several named mocks
+            // of a type that also has a real bean).
             rule("lib line coverage") {
-                minBound(90)
+                minBound(95)
             }
             rule("lib branch coverage") {
                 bound {
                     coverageUnits = kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH
-                    minValue = 65
+                    minValue = 90
                 }
             }
         }

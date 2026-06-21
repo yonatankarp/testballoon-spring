@@ -39,6 +39,25 @@ dependencies {
     api(libs.spring.boot.test)
     api(libs.spring.boot.test.autoconfigure)
     api(libs.mockk)
+
+    // Test-scope only (never published): white-box unit tests for the internal error/guard
+    // paths that the black-box testBalloon suites cannot reach. testBalloon's plugin can't be
+    // applied to a module with main source, so the library's own unit tests use kotlin.test.
+    testImplementation(kotlin("test"))
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+// The Spring BOM pins JUnit to 6.x; align the kotlin.test backend to a consistent
+// JUnit Platform 1.13.4 / Jupiter 5.13.4 stack so the launcher can run the engine.
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.junit.platform") useVersion(libs.versions.junit.platform.get())
+        if (requested.group == "org.junit.jupiter") useVersion(libs.versions.junit.jupiter.get())
+    }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 publishing {
