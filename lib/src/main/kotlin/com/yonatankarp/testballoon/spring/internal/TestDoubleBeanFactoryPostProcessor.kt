@@ -12,6 +12,12 @@ import org.springframework.test.context.ContextCustomizer
 import org.springframework.test.context.ContextCustomizerFactory
 import org.springframework.test.context.MergedContextConfiguration
 
+/**
+ * Spring SPI entry point, registered in `META-INF/spring.factories`. Spring's
+ * `TestContextManager` instantiates it reflectively while building a context and, when the
+ * loading thread has doubles queued (see [MockBeanRegistry]), returns a customizer that
+ * installs them. Returns `null` when no doubles are queued, leaving the context untouched.
+ */
 public class MockBeanContextCustomizerFactory : ContextCustomizerFactory {
     override fun createContextCustomizer(
         testClass: Class<*>,
@@ -28,7 +34,11 @@ public class MockBeanContextCustomizerFactory : ContextCustomizerFactory {
  */
 internal class TestDoubleContextCustomizer(private val doubles: List<RegisteredDouble>) : ContextCustomizer {
     override fun customizeContext(context: ConfigurableApplicationContext, mergedConfig: MergedContextConfiguration) {
-        val beanFactory = context.beanFactory as DefaultListableBeanFactory
+        val beanFactory = context.beanFactory as? DefaultListableBeanFactory
+            ?: error(
+                "testballoon-spring needs a DefaultListableBeanFactory to register test doubles, " +
+                    "but the context uses ${context.beanFactory::class.java.name}.",
+            )
         beanFactory.isAllowBeanDefinitionOverriding = true
         beanFactory.registerBeanDefinition(
             POST_PROCESSOR_NAME,
@@ -39,8 +49,7 @@ internal class TestDoubleContextCustomizer(private val doubles: List<RegisteredD
     }
 
     private companion object {
-        const val POST_PROCESSOR_NAME =
-            "com.yonatankarp.testballoon.spring.internal.TestDoubleBeanFactoryPostProcessor"
+        val POST_PROCESSOR_NAME: String = TestDoubleBeanFactoryPostProcessor::class.java.name
     }
 }
 
