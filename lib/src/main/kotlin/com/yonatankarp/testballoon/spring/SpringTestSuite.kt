@@ -32,6 +32,10 @@ public inline fun <reified C : SpringTestConfig> TestSuite.springTest(
     noinline content: SpringSuiteScope.() -> Unit,
 ): Unit = springTest(C::class.java, content)
 
+/**
+ * Non-reified form of [springTest], taking the carrier as a [Class]. The reified overload
+ * delegates here; call it directly only when the carrier type is not known statically.
+ */
 public fun TestSuite.springTest(carrier: Class<out SpringTestConfig>, content: SpringSuiteScope.() -> Unit) {
     SpringSuiteScope(this, carrier).content()
 }
@@ -65,7 +69,9 @@ public class SpringSuiteScope internal constructor(
     /**
      * Registers a mockk [spy][io.mockk.spyk] that wraps the **real** bean of type [T]
      * (Spring `@SpyBean` parity): unstubbed calls run the real implementation while calls
-     * are recorded and may be selectively overridden. The spy is reset before each test.
+     * are recorded and may be selectively overridden. The spy's stubs and recorded calls are
+     * reset before each test, but the wrapped real bean is the context's singleton, so any
+     * mutable state it holds is shared across the suite's tests.
      *
      * The real bean only exists once the context is built, so the spy cannot be returned
      * directly; use a property delegate, which resolves the live spy on each access:
@@ -112,7 +118,10 @@ public class SpyBeanDelegate<T : Any> @PublishedApi internal constructor(private
 }
 
 /** Receiver of a [SpringSuiteScope.test] body: looks up beans from the live context. */
-public class SpringTestScope internal constructor(public val applicationContext: ApplicationContext) {
+public class SpringTestScope internal constructor(
+    /** The live [ApplicationContext] for the current test, as an escape hatch for lookups [bean] does not cover. */
+    public val applicationContext: ApplicationContext,
+) {
     /** Returns the unique bean of type [T] from the context (a real bean or a [SpringSuiteScope.mockBean]). */
     public inline fun <reified T : Any> bean(): T = applicationContext.getBean(T::class.java)
 

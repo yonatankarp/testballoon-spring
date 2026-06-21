@@ -45,9 +45,11 @@ setup nests inside via `springTest`.
   bean (or under `name`, for `@Qualifier` injection points), reset before each test.
 - `spyBean<T>(name = null)` — a mockk spy wrapping the **real** bean of type `T`
   (Spring `@SpyBean` parity): unstubbed calls run the real implementation and are
-  recorded; individual calls can be stubbed. Reset before each test. See below.
-- `bean<T>()` / `bean<T>(name)` — look up a bean from the live `ApplicationContext`.
-- `applicationContext` — the context itself, as an escape hatch.
+  recorded; individual calls can be stubbed. Reset before each test. Bind it with a
+  delegate (`val x by spyBean<T>()`), not `=`, and read it inside a test body. See below.
+- `bean<T>()` / `bean<T>(name)` — inside a test body, look up a bean from the live
+  `ApplicationContext`.
+- `applicationContext` — inside a test body, the context itself, as an escape hatch.
 
 ### Spy beans
 
@@ -122,9 +124,10 @@ slice), `@ActiveProfiles`, `@TestPropertySource`/`properties`, `@Import`,
 
 ## Installation
 
-Published to GitHub Packages. Add the repository (GitHub Packages requires
-authentication even for reads) and the dependency to the test configuration of the
-module where you write suites:
+No release is published yet; `0.1.0-SNAPSHOT` is the pending pre-release coordinate, so
+the dependency below will not resolve until a build is published. Once it is, add the
+repository (GitHub Packages requires authentication even for reads) and the dependency to
+the test configuration of the module where you write suites:
 
 ```kotlin
 repositories {
@@ -155,8 +158,8 @@ Two build alignments are needed alongside the Spring Boot BOM:
   alignment the testBalloon plugin fails with a `KotlinWrapperPre2_4_0` NPE
   (`getPluginClasspaths() is null`). Set `extra["kotlin.version"] = "<your kotlin>"` before
   importing the BOM.
-- testBalloon's engine needs JUnit Platform 1.13.4; the Spring BOM pins it lower. Force
-  `org.junit.platform` to 1.13.4 and add
+- testBalloon's engine needs JUnit Platform 1.14.4; the Spring BOM pins it lower. Force
+  `org.junit.platform` to 1.14.4 and add
   `testRuntimeOnly("org.junit.platform:junit-platform-launcher")`.
 
 ## Lifecycle
@@ -177,7 +180,7 @@ owns its mock instances, so two suites do not share a cached context.
 
 ## Compatibility
 
-Spring Boot 4.1.0 · Kotlin 2.4.0 · testBalloon 1.0.1 · JVM 25. Pre-release
+Spring Boot 4.1.0 · Kotlin 2.4.0 · testBalloon 1.0.1-K2.4.0 · JVM 25. Pre-release
 (`0.1.0-SNAPSHOT`).
 
 ## License

@@ -52,7 +52,7 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-// testBalloon's engine needs JUnit Platform 1.13.4; the Spring Boot BOM pins it lower.
+// testBalloon's engine needs JUnit Platform 1.14.4; the Spring Boot BOM pins it lower.
 configurations.all {
     resolutionStrategy.eachDependency {
         if (requested.group == "org.junit.platform") useVersion(libs.versions.junit.platform.get())
