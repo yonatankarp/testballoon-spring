@@ -2,6 +2,10 @@
 
 [![CI](https://github.com/yonatankarp/testballoon-spring/actions/workflows/ci.yml/badge.svg)](https://github.com/yonatankarp/testballoon-spring/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Spring Boot](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fyonatankarp%2Ftestballoon-spring%2Fmain%2Fgradle%2Flibs.versions.toml&query=%24.versions%5B%27spring-boot%27%5D&label=Spring%20Boot&color=6DB33F&logo=springboot&logoColor=white)](gradle/libs.versions.toml)
+[![Kotlin](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fyonatankarp%2Ftestballoon-spring%2Fmain%2Fgradle%2Flibs.versions.toml&query=%24.versions.kotlin&label=Kotlin&color=7F52FF&logo=kotlin&logoColor=white)](gradle/libs.versions.toml)
+[![testBalloon](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fyonatankarp%2Ftestballoon-spring%2Fmain%2Fgradle%2Flibs.versions.toml&query=%24.versions.testballoon&label=testBalloon&color=2965F1)](gradle/libs.versions.toml)
+[![JVM](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fyonatankarp%2Ftestballoon-spring%2Fmain%2Fgradle%2Flibs.versions.toml&query=%24.versions.jvm&label=JVM&color=ED8B00&logo=openjdk&logoColor=white)](gradle/libs.versions.toml)
 
 Write Spring Boot tests as [testBalloon](https://github.com/infix-de/testBalloon)
 suites, with idiomatic value-based mocks (`val x = mockBean<T>()`) instead of
@@ -180,16 +184,6 @@ owns its mock instances, so two suites do not share a cached context.
   class-level equivalent on the carrier where one exists.
 - **Cross-suite context caching** — each suite owns its own mock/spy instances, so two
   suites never share a cached context (Spring keys caching on customizer equality).
-
-## Compatibility
-
-[![Spring Boot](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fyonatankarp%2Ftestballoon-spring%2Fmain%2Fgradle%2Flibs.versions.toml&query=%24.versions%5B%27spring-boot%27%5D&label=Spring%20Boot&color=6DB33F&logo=springboot&logoColor=white)](gradle/libs.versions.toml)
-[![Kotlin](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fyonatankarp%2Ftestballoon-spring%2Fmain%2Fgradle%2Flibs.versions.toml&query=%24.versions.kotlin&label=Kotlin&color=7F52FF&logo=kotlin&logoColor=white)](gradle/libs.versions.toml)
-[![testBalloon](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fyonatankarp%2Ftestballoon-spring%2Fmain%2Fgradle%2Flibs.versions.toml&query=%24.versions.testballoon&label=testBalloon&color=2965F1)](gradle/libs.versions.toml)
-[![JVM](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fyonatankarp%2Ftestballoon-spring%2Fmain%2Fgradle%2Flibs.versions.toml&query=%24.versions.jvm&label=JVM&color=ED8B00&logo=openjdk&logoColor=white)](gradle/libs.versions.toml)
-
-Versions track [`gradle/libs.versions.toml`](gradle/libs.versions.toml), so the badges
-above update with the build. Pre-release (`0.1.0-SNAPSHOT`); no build is published yet.
 
 ## License
 
