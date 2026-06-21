@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.spring.dependency.management)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.kover)
     `java-library`
     `maven-publish`
 }

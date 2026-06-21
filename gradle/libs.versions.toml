@@ -8,6 +8,7 @@ junit-platform = "1.13.4"
 jvm = "25"
 ktlint-plugin = "12.1.2"
 ktlint-cli = "1.5.0"
+kover = "0.9.8"
 
 [libraries]
 testballoon-core = { module = "de.infix.testBalloon:testBalloon-framework-core", version.ref = "testballoon" }
@@ -30,3 +31,4 @@ kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotl
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
 testballoon = { id = "de.infix.testBalloon", version.ref = "testballoon" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-plugin" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
