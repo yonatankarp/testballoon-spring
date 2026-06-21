@@ -147,7 +147,7 @@ repositories {
 }
 
 dependencies {
-    testImplementation("com.yonatankarp:testballoon-spring:0.1.0")
+    testImplementation("com.yonatankarp:testballoon-spring:0.1.1")
 }
 ```
 
