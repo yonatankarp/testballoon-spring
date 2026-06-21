@@ -36,6 +36,7 @@ dependencies {
     testImplementation(libs.spring.boot.webflux.test)
     testImplementation(libs.spring.boot.starter.webflux)
     testImplementation(libs.json.path)
+    testImplementation(libs.kotlinx.coroutines.reactor)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
