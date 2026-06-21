@@ -8,5 +8,4 @@ pluginManagement {
 rootProject.name = "testballoon-spring"
 include(
     "lib",
-    "integration-test",
 )

@@ -112,8 +112,8 @@ val GreetingAppSuite by testSuite {
 ```
 
 The bridge is slice-agnostic: it drives Spring's own `TestContextManager`, so any slice
-that works off a `Class` works here. [`integration-test/`](integration-test/src/test/kotlin)
-has runnable examples for `@WebFluxTest`, `@SpringBootTest`, `@JsonTest` (a non-WebFlux
+that works off a `Class` works here. The [`integration` suites](lib/src/test/kotlin/com/yonatankarp/testballoon/spring/integration)
+have runnable examples for `@WebFluxTest`, `@SpringBootTest`, `@JsonTest` (a non-WebFlux
 slice), `@ActiveProfiles`, `@TestPropertySource`/`properties`, `@Import`,
 `@DynamicPropertySource`, named beans, and spy beans.
 
@@ -123,7 +123,8 @@ slice), `@ActiveProfiles`, `@TestPropertySource`/`properties`, `@Import`,
 ## Installation
 
 Published to GitHub Packages. Add the repository (GitHub Packages requires
-authentication even for reads) and the dependency to a **test-only** module:
+authentication even for reads) and the dependency to the test configuration of the
+module where you write suites:
 
 ```kotlin
 repositories {
@@ -141,22 +142,21 @@ dependencies {
 }
 ```
 
-## Module layout (important)
+## Build setup (important)
 
-The testBalloon Gradle plugin cannot be applied to a module that has `main` Kotlin
-source — Kotlin 2.4.0's Build Tools API throws `getPluginClasspaths() is null` on
-the main compilation, where the plugin is not applicable. So testBalloon suites
-live in a **test-only module** (no `src/main`) that applies the plugin and depends
-on this library. The library itself is a plain `kotlin.jvm` module.
+Apply the testBalloon Gradle plugin to the module whose tests you write, and add this
+library to its test configuration. The plugin applies cleanly to a module that also has
+`main` Kotlin source, so no separate test-only module is needed — this repository keeps the
+library and its suites in one module (see [`lib/build.gradle.kts`](lib/build.gradle.kts)).
 
-Two build alignments are needed in the test module (see
-[`integration-test/build.gradle.kts`](integration-test/build.gradle.kts)):
+Two build alignments are needed alongside the Spring Boot BOM:
 
-- The Spring Boot BOM pins `kotlin-build-tools-impl` below your Kotlin version,
-  triggering a `KotlinWrapperPre2_4_0` NPE. Set
-  `extra["kotlin.version"] = "<your kotlin>"` before importing the BOM.
-- testBalloon's engine needs JUnit Platform 1.13.4; the Spring BOM pins it lower.
-  Force `org.junit.platform` to 1.13.4 and add
+- The Spring Boot BOM pins `kotlin-build-tools-impl` below your Kotlin version. Without the
+  alignment the testBalloon plugin fails with a `KotlinWrapperPre2_4_0` NPE
+  (`getPluginClasspaths() is null`). Set `extra["kotlin.version"] = "<your kotlin>"` before
+  importing the BOM.
+- testBalloon's engine needs JUnit Platform 1.13.4; the Spring BOM pins it lower. Force
+  `org.junit.platform` to 1.13.4 and add
   `testRuntimeOnly("org.junit.platform:junit-platform-launcher")`.
 
 ## Lifecycle

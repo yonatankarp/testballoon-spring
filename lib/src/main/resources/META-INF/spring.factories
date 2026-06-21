@@ -1,2 +1,2 @@
 org.springframework.test.context.ContextCustomizerFactory=\
-  com.yonatankarp.testballoon.spring.MockBeanContextCustomizerFactory
+  com.yonatankarp.testballoon.spring.internal.MockBeanContextCustomizerFactory
