@@ -131,10 +131,9 @@ slice), `@ActiveProfiles`, `@TestPropertySource`/`properties`, `@Import`,
 
 ## Installation
 
-No release is published yet; `0.1.0-SNAPSHOT` is the pending pre-release coordinate, so
-the dependency below will not resolve until a build is published. Once it is, add the
-repository (GitHub Packages requires authentication even for reads) and the dependency to
-the test configuration of the module where you write suites:
+Published to GitHub Packages. Add the repository (GitHub Packages requires
+authentication even for reads) and the dependency to the test configuration of the
+module where you write suites:
 
 ```kotlin
 repositories {
@@ -148,7 +147,7 @@ repositories {
 }
 
 dependencies {
-    testImplementation("com.yonatankarp:testballoon-spring:0.1.0-SNAPSHOT")
+    testImplementation("com.yonatankarp:testballoon-spring:0.1.0")
 }
 ```
 
