@@ -3,6 +3,11 @@ plugins {
     alias(libs.plugins.kotlin.spring)
     alias(libs.plugins.spring.dependency.management)
     alias(libs.plugins.testballoon)
+    alias(libs.plugins.ktlint)
+}
+
+ktlint {
+    version.set(libs.versions.ktlint.cli.get())
 }
 
 kotlin {

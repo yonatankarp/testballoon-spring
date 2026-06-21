@@ -6,7 +6,8 @@ plugins {
 }
 
 group = "com.yonatankarp"
-version = "0.1.0-SNAPSHOT"
+// Releases pass -PreleaseVersion=<tag> (a leading "v" is stripped); otherwise a SNAPSHOT.
+version = providers.gradleProperty("releaseVersion").map { it.removePrefix("v") }.getOrElse("0.1.0-SNAPSHOT")
 
 subprojects {
     repositories {

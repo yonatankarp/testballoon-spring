@@ -5,7 +5,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.test.context.TestContextManager
 import java.lang.reflect.Method
 
-class SpringContext private constructor(
+internal class SpringContext private constructor(
     private val testContextManager: TestContextManager,
     private val carrierInstance: SpringTestConfig,
     private val mocks: List<RegisteredMock>,
@@ -13,25 +13,25 @@ class SpringContext private constructor(
     val applicationContext: ApplicationContext
         get() = testContextManager.testContext.applicationContext
 
-    fun beforeTest() {
+    internal fun beforeTest() {
         testContextManager.beforeTestMethod(carrierInstance, CARRIER_METHOD)
         mocks.forEach { clearMocks(it.mock) }
     }
 
-    fun afterTest() {
+    internal fun afterTest() {
         testContextManager.afterTestMethod(carrierInstance, CARRIER_METHOD, null)
     }
 
-    fun close() {
+    internal fun close() {
         testContextManager.afterTestClass()
     }
 
-    companion object {
+    internal companion object {
         private val CARRIER_METHOD: Method =
             SpringTestConfig::class.java.getDeclaredMethod("springTestBalloonCarrier")
 
-        internal fun load(carrier: Class<out SpringTestConfig>, mocks: List<RegisteredMock>): SpringContext {
-            val instance = carrier.getDeclaredConstructor().newInstance()
+        fun load(carrier: Class<out SpringTestConfig>, mocks: List<RegisteredMock>): SpringContext {
+            val instance = instantiate(carrier)
             MockBeanRegistry.push(mocks)
             try {
                 val testContextManager = TestContextManager(carrier)
@@ -41,6 +41,15 @@ class SpringContext private constructor(
             } finally {
                 MockBeanRegistry.pop()
             }
+        }
+
+        private fun instantiate(carrier: Class<out SpringTestConfig>): SpringTestConfig = try {
+            carrier.getDeclaredConstructor().newInstance()
+        } catch (e: NoSuchMethodException) {
+            throw IllegalArgumentException(
+                "Carrier ${carrier.name} must have a no-arg constructor.",
+                e,
+            )
         }
     }
 }

@@ -15,6 +15,5 @@ interface GreetingService {
 @RestController
 class GreetingController(private val service: GreetingService) {
     @GetMapping("/greet/{name}")
-    fun greet(@PathVariable name: String): Map<String, String> =
-        mapOf("message" to service.greet(name))
+    fun greet(@PathVariable name: String): Map<String, String> = mapOf("message" to service.greet(name))
 }
