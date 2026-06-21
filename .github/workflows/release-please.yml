@@ -1,0 +1,41 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+
+  # GITHUB_TOKEN-created releases do not trigger other workflows, so the publish
+  # is chained here off release-please's output rather than a `release: published`
+  # trigger. Reuses the same release-jar workflow the manual publish used.
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      contents: read
+      packages: write
+    uses: yonatankarp/github-actions/.github/workflows/release-jar.yml@v2
+    with:
+      module-name: lib
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
