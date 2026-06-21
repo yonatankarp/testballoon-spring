@@ -54,24 +54,25 @@ internal sealed interface RegisteredDouble {
 
 /**
  * Mutable cell shared between the [SpringSuiteScope] (which hands the spy back to the
- * test) and [CompositeContextCustomizer] (which fills it once the real bean is built).
+ * test) and the post-processor (which fills it once the real bean is built). Read only
+ * after the context has loaded, by which point [wrap] has populated it.
  */
 @PublishedApi
 internal class SpyHolder {
-    private var captured: Any? = null
+    private lateinit var captured: Any
 
-    val spy: Any get() = checkNotNull(captured) { "Spy bean has not been created yet; load the context first." }
+    val spy: Any get() = captured
 
     fun wrap(realBean: Any): Any = spyk(realBean, recordPrivateCalls = false).also { captured = it }
 }
 
 /**
- * Hands the doubles declared in a [springTest] block to the context customizers while
- * the carrier's context is being built.
+ * Hands the doubles declared in a [springTest] block to the context customizer while the
+ * carrier's context is being built.
  *
- * Confined to the loading thread: [SpringContext.load] pushes, triggers the
- * synchronous `TestContextManager` construction (where the factories read), and pops,
- * all on one thread. Parallel suites load on separate threads, each with its own value.
+ * Confined to the loading thread: [SpringContext.load] pushes, triggers the synchronous
+ * `TestContextManager` construction (where the factory reads), and pops, all on one
+ * thread. Parallel suites load on separate threads, each with its own value.
  */
 internal object MockBeanRegistry {
     private val current = ThreadLocal<List<RegisteredDouble>>()
@@ -94,105 +95,97 @@ public class MockBeanContextCustomizerFactory : ContextCustomizerFactory {
         configAttributes: List<ContextConfigurationAttributes>,
     ): ContextCustomizer? {
         val doubles = MockBeanRegistry.current()
-        val mocks = doubles.filterIsInstance<RegisteredDouble.Mock>()
-        val spies = doubles.filterIsInstance<RegisteredDouble.Spy>()
-        return when {
-            mocks.isEmpty() && spies.isEmpty() -> null
-            else -> CompositeContextCustomizer(mocks, spies)
-        }
+        return if (doubles.isEmpty()) null else TestDoubleContextCustomizer(doubles)
     }
 }
 
 /**
- * Single customizer covering both kinds of double, so their bean-name and equality
- * contributions stay together (Spring keys context caching on customizer equality).
+ * Registers a [TestDoubleBeanFactoryPostProcessor] for the suite's doubles. Equality is
+ * left as identity so each suite keys a distinct context (it owns its own double instances).
  */
-internal class CompositeContextCustomizer(
-    private val mocks: List<RegisteredDouble.Mock>,
-    private val spies: List<RegisteredDouble.Spy>,
-) : ContextCustomizer {
+internal class TestDoubleContextCustomizer(private val doubles: List<RegisteredDouble>) : ContextCustomizer {
     override fun customizeContext(context: ConfigurableApplicationContext, mergedConfig: MergedContextConfiguration) {
-        val beanFactory: ConfigurableListableBeanFactory = context.beanFactory
-        val registry = beanFactory as BeanDefinitionRegistry
-        if (beanFactory is DefaultListableBeanFactory) {
-            beanFactory.isAllowBeanDefinitionOverriding = true
-        }
+        val beanFactory = context.beanFactory as DefaultListableBeanFactory
+        beanFactory.isAllowBeanDefinitionOverriding = true
+        beanFactory.registerBeanDefinition(
+            POST_PROCESSOR_NAME,
+            RootBeanDefinition(TestDoubleBeanFactoryPostProcessor::class.java).apply {
+                setInstanceSupplier { TestDoubleBeanFactoryPostProcessor(doubles) }
+            },
+        )
+    }
 
+    private companion object {
+        const val POST_PROCESSOR_NAME = "com.yonatankarp.testballoon.spring.TestDoubleBeanFactoryPostProcessor"
+    }
+}
+
+/**
+ * Installs the test doubles into the bean factory. Runs as a lowest-precedence
+ * [BeanFactoryPostProcessor] so it executes after `ConfigurationClassPostProcessor`, when
+ * every real bean definition (including `@Bean` methods) exists to be replaced or wrapped.
+ */
+internal class TestDoubleBeanFactoryPostProcessor(doubles: List<RegisteredDouble>) :
+    BeanFactoryPostProcessor,
+    Ordered {
+    private val mocks = doubles.filterIsInstance<RegisteredDouble.Mock>()
+    private val spies = doubles.filterIsInstance<RegisteredDouble.Spy>()
+
+    override fun getOrder(): Int = Ordered.LOWEST_PRECEDENCE
+
+    override fun postProcessBeanFactory(beanFactory: ConfigurableListableBeanFactory) {
+        val registry = beanFactory as BeanDefinitionRegistry
         registerMocks(beanFactory, registry)
-        // Spies are wired by a BeanFactoryPostProcessor rather than here: at customize time
-        // the config classes have not been parsed yet, so a @Bean-method target bean has no
-        // definition to wrap. The post-processor runs after ConfigurationClassPostProcessor,
-        // when every target definition exists.
-        if (spies.isNotEmpty()) {
+        registerSpies(beanFactory, registry)
+    }
+
+    private fun registerMocks(beanFactory: ConfigurableListableBeanFactory, registry: BeanDefinitionRegistry) {
+        val countByType = mocks.groupingBy { it.type }.eachCount()
+        // The real bean names of each mocked type, captured before any removal so that a
+        // sole unnamed mock can re-use the replaced bean's name (keeping by-name injection
+        // working) and so two mocks of one type don't evict each other.
+        val realNamesByType = mocks.map { it.type }.distinct().associateWith { type ->
+            beanFactory.getBeanNamesForType(type, true, false).toList()
+        }
+        realNamesByType.values.flatten().toSet().forEach { name ->
+            if (registry.containsBeanDefinition(name)) registry.removeBeanDefinition(name)
+        }
+        mocks.forEach { mock ->
+            val sole = countByType.getValue(mock.type) == 1
+            val beanName = mock.name
+                ?: realNamesByType.getValue(mock.type).singleOrNull()?.takeIf { sole }
+                ?: "${mock.type.name}#MockBean"
             registry.registerBeanDefinition(
-                SPY_POST_PROCESSOR_NAME,
-                RootBeanDefinition(SpyBeanFactoryPostProcessor::class.java).apply {
-                    setInstanceSupplier { SpyBeanFactoryPostProcessor(spies) }
+                beanName,
+                RootBeanDefinition(mock.type).apply {
+                    setInstanceSupplier { mock.instance }
+                    isPrimary = sole
                 },
             )
         }
     }
 
-    private fun registerMocks(beanFactory: ConfigurableListableBeanFactory, registry: BeanDefinitionRegistry) {
-        // Remove pre-existing real definitions once per mocked type, before registering any mock —
-        // otherwise a second mock of the same type would evict the first one we just added.
-        mocks.map { it.type }.distinct().forEach { type ->
-            beanFactory.getBeanNamesForType(type, true, false).forEach { name ->
-                if (registry.containsBeanDefinition(name)) registry.removeBeanDefinition(name)
-            }
-        }
-
-        val mockCountByType = mocks.groupingBy { it.type }.eachCount()
-        mocks.forEach { mock ->
-            val definition = RootBeanDefinition(mock.type).apply {
-                setInstanceSupplier { mock.instance }
-                // Only the sole mock of a type can be primary; multiple are resolved by name.
-                isPrimary = mockCountByType[mock.type] == 1
-            }
-            registry.registerBeanDefinition(mock.beanName(), definition)
-        }
-    }
-
-    // Fully-qualified to avoid collisions between same-simple-name types from different packages.
-    private fun RegisteredDouble.Mock.beanName(): String = name ?: "${type.name}#MockBean"
-
-    private companion object {
-        const val SPY_POST_PROCESSOR_NAME = "com.yonatankarp.testballoon.spring.SpyBeanFactoryPostProcessor"
-    }
-}
-
-/**
- * Replaces each spy's target bean definition with a definition that wraps the real bean in
- * a mockk spy. Runs as a [BeanFactoryPostProcessor] (lowest precedence) so config classes
- * are already parsed and every target definition exists to be located and wrapped.
- */
-internal class SpyBeanFactoryPostProcessor(private val spies: List<RegisteredDouble.Spy>) :
-    BeanFactoryPostProcessor,
-    Ordered {
-    override fun getOrder(): Int = Ordered.LOWEST_PRECEDENCE
-
-    override fun postProcessBeanFactory(beanFactory: ConfigurableListableBeanFactory) {
-        val registry = beanFactory as BeanDefinitionRegistry
+    private fun registerSpies(beanFactory: ConfigurableListableBeanFactory, registry: BeanDefinitionRegistry) {
         spies.forEach { spy ->
             val targetName = resolveTargetName(beanFactory, spy)
             val targetDefinition = registry.getBeanDefinition(targetName)
             val targetWasPrimary = targetDefinition.isPrimary
             registry.removeBeanDefinition(targetName)
 
-            // Re-register the original definition under a hidden name so its instance is
-            // still created the normal way (constructor injection, BPPs, etc.); the spy
-            // wraps that real instance lazily, the first time the spy bean is requested.
-            // Clear primary on the hidden target so only the spy bean (under the original
-            // name) is a primary candidate — otherwise spying a @Primary bean yields two.
+            // Re-register the original definition under a hidden name so its instance is still
+            // created the normal way (constructor injection, BPPs, etc.); clear its primary flag
+            // so only the spy bean (under the original name) is a primary candidate of the type.
             targetDefinition.isPrimary = false
             val realName = "$targetName#SpyTarget"
             registry.registerBeanDefinition(realName, targetDefinition)
 
-            val spyDefinition = RootBeanDefinition(spy.type).apply {
-                setInstanceSupplier { spy.wrap(beanFactory.getBean(realName)) }
-                isPrimary = targetWasPrimary || spy.name == null
-            }
-            registry.registerBeanDefinition(targetName, spyDefinition)
+            registry.registerBeanDefinition(
+                targetName,
+                RootBeanDefinition(spy.type).apply {
+                    setInstanceSupplier { spy.wrap(beanFactory.getBean(realName)) }
+                    isPrimary = targetWasPrimary || spy.name == null
+                },
+            )
         }
     }
 
