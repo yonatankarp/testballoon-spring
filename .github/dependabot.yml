@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    ignore:
+      # Pinned to testBalloon's JUnit Platform engine substrate (1.13.x).
+      # Major bumps (e.g. 6.x) break test discovery; allow patch/minor within 1.13.x.
+      - dependency-name: "org.junit.platform:junit-platform-launcher"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
