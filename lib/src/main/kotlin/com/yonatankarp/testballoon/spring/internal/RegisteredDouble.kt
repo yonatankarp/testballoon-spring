@@ -43,9 +43,11 @@ internal sealed interface RegisteredDouble {
  */
 @PublishedApi
 internal class SpyHolder {
-    private lateinit var captured: Any
+    private var captured: Any? = null
 
-    val spy: Any get() = captured
+    val spy: Any get() = checkNotNull(captured) {
+        "spyBean must be read inside a test body, after the context has loaded, not at declaration time."
+    }
 
     fun wrap(realBean: Any): Any = spyk(realBean, recordPrivateCalls = false).also { captured = it }
 }
