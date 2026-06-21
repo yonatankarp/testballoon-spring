@@ -176,17 +176,21 @@ internal class SpyBeanFactoryPostProcessor(private val spies: List<RegisteredDou
         spies.forEach { spy ->
             val targetName = resolveTargetName(beanFactory, spy)
             val targetDefinition = registry.getBeanDefinition(targetName)
+            val targetWasPrimary = targetDefinition.isPrimary
             registry.removeBeanDefinition(targetName)
 
             // Re-register the original definition under a hidden name so its instance is
             // still created the normal way (constructor injection, BPPs, etc.); the spy
             // wraps that real instance lazily, the first time the spy bean is requested.
+            // Clear primary on the hidden target so only the spy bean (under the original
+            // name) is a primary candidate — otherwise spying a @Primary bean yields two.
+            targetDefinition.isPrimary = false
             val realName = "$targetName#SpyTarget"
             registry.registerBeanDefinition(realName, targetDefinition)
 
             val spyDefinition = RootBeanDefinition(spy.type).apply {
                 setInstanceSupplier { spy.wrap(beanFactory.getBean(realName)) }
-                isPrimary = targetDefinition.isPrimary || spy.name == null
+                isPrimary = targetWasPrimary || spy.name == null
             }
             registry.registerBeanDefinition(targetName, spyDefinition)
         }
