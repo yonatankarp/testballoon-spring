@@ -9,7 +9,7 @@ junit-platform = "1.14.4"
 jvm = "25"
 ktlint-plugin = "14.2.0"
 ktlint-cli = "1.5.0"
-kover = "0.9.8"
+kover = "0.9.9"
 
 [libraries]
 testballoon-core = { module = "de.infix.testBalloon:testBalloon-framework-core", version.ref = "testballoon" }
